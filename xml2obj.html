@@ -1,0 +1,117 @@
+<script>
+
+function xml2obj(feed){
+	if(feed.indexOf('<')==-1) return feed;
+
+	var list = []
+
+	var name = findFirstName(feed);
+	var closed = findClosed(feed);
+	var closedIndex = feed.indexOf('>');
+
+	if(closed)
+		var attributesString = feed.substring(name.length+2,feed.indexOf('/>'));
+	else
+		var attributesString = feed.substring(name.length+2,feed.indexOf('>'));
+	var attributes = readAttributes(attributesString);
+	if(closed)
+		return attributes;
+	if(Object.size(attributes)!=0)
+		list.push(attributes);
+
+	feed = feed.substring(closedIndex+1,feed.length - name.length - 3);
+	
+	while(feed.length != 0){
+		var obj = {}
+		var subname = findFirstName(feed);
+		if(findClosed(feed))
+			var subFeedString = feed.substring(0,feed.indexOf('/>')+2);
+		else
+			var subFeedString = feed.substring(0,feed.indexOf('</'+subname+'>')+3+subname.length);
+		feed = feed.substring(subFeedString.length);
+		obj[subname] = xml2obj(subFeedString);
+		list.push(obj);
+	}
+	console.log(list)
+	obj = {};
+	obj[name] = joinObjects(list);
+	return obj;
+}
+
+function joinObjects(listObjects){
+	//console.log(listObjects);
+	var obj = {}
+	for(var i=0;i<listObjects.length;++i){
+		for(var key in listObjects[i]){
+			if(listObjects[i].hasOwnProperty(key)){
+				if(!obj.hasOwnProperty(key)){
+					obj[key] = listObjects[i][key];
+					continue;
+				}
+				if(Array.isArray(obj[key])){
+					obj[key].push(listObjects[i][key]);
+					continue;
+				}
+				var objTemp = obj[key];
+				delete obj[key];
+
+				obj[key] = [];
+				obj[key].push(objTemp);
+				obj[key].push(listObjects[i][key]);
+			}
+		}
+
+	}
+	//console.log(obj);
+	return obj;
+}
+
+function findFirstName(feed){
+	var firstSpace = feed.indexOf(' ');
+	var firstArrow = feed.indexOf('>');
+	if(firstSpace == -1 || firstSpace > firstArrow)
+		var name = feed.split('>');
+	else 
+		var name = feed.split(' ');
+	return name[0].substring(1);
+}
+
+function findClosed(feed){
+	var firstArrow = feed.indexOf('>');
+	var firstSlashArrow = feed.indexOf('/>');
+	if(firstSlashArrow == -1 || firstArrow<firstSlashArrow)
+		return false
+	return true;
+}
+
+function readAttributes(attributesString){
+	var attributes = {};
+	var endkey;
+	while(true){
+		var endkey = attributesString.indexOf('=');
+		if(endkey == -1) break;
+		var key = attributesString.substring(0,endkey);
+
+		var attributestart = endkey+1;
+		var attributeend = attributesString.substring(attributestart+1).indexOf(attributesString.charAt(attributestart));
+
+		var attribute = attributesString.substring(attributestart+1,attributeend+attributestart+1);
+
+		attributes['@'+key] = attribute;
+		attributesString = attributesString.substring(attributeend+attributestart+3);
+	}
+	return attributes;
+
+}
+
+Object.size = function(obj) {
+    var size = 0, key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) size++;
+    }
+    return size;
+};
+
+var feed = '<items><item><name>Item1</name><url href="test"/><price>1</price></item><item><name>Item2</name><price>2</price></item><item><name>Item3</name><price>3</price></item></items>';
+console.log(xml2obj(feed));
+</script>
