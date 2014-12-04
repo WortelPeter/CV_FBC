@@ -9,50 +9,46 @@ function remoteScript() {
 			null
 		*/
 
-		var date = new Date;
-
-
-		// check al user input parameters, raise error if not up to standard.
-		//this.parameterCheck(feedURL,feedSpec,feedFilter,itemSpecifier,adSpec,keyWords,maxCpc);
+		//var date = new Date;
 
 		// find the feed based campaign. Throws error if campaign not found
-		var objCampaign = this.findCampaign(typeof strCampaignName !== 'undefined' ? strCampaignName : "Feed_based_campaign");
+		//var objCampaign = this.findCampaign(typeof strCampaignName !== 'undefined' ? strCampaignName : "Feed_based_campaign");
 
-		var label = this.initLabel(objCampaign);
+		//var label = this.initLabel(objCampaign);
 
 		//delete al adGroups in campaign
-		if(date.getUTCHours() + 2 == intRefreshHour){
-			label.setDescription("0");
-			var objCampaign = this.pauseAdGroups(objCampaign);
-		}
+		//if(date.getUTCHours() + 2 == intRefreshHour){
+		//	label.setDescription("0");
+		//	var objCampaign = this.pauseAdGroups(objCampaign);
+		//}
 		
 		// read in a feed
-		var listItems = this.readFeed(strFeedURL, parseInt(intFeedType), objDataMapper, strItemSpecifier);
+		var listItems = this.readFeed(strFeedURL,strItemSpecifier);
 	
 		// filter the items
-		listItems = this.filterItems(listItems,listFilters);
+		//listItems = this.filterItems(listItems,listFilters);
 
-		listItems = listItems.slice(label.getDescription());
+		//listItems = listItems.slice(label.getDescription());
 
 		// create an adGroup for each item
-		for(var i=0;i<listItems.length;++i){
-			var intRemTime = AdWordsApp.getExecutionInfo().getRemainingTime();
-			var intRemCreate = AdWordsApp.getExecutionInfo().getRemainingCreateQuota();
-			var intRemGet = AdWordsApp.getExecutionInfo().getRemainingGetQuota();
+		//for(var i=0;i<listItems.length;++i){
+			//var intRemTime = AdWordsApp.getExecutionInfo().getRemainingTime();
+			//var intRemCreate = AdWordsApp.getExecutionInfo().getRemainingCreateQuota();
+			//var intRemGet = AdWordsApp.getExecutionInfo().getRemainingGetQuota();
 
-			if(intRemTime < 30 || intRemCreate < 100 || intRemGet < 100){
-				Logger.log("I have reached my limit, see you next hour!");
-				label.setDescription(i.toString())
-				return;
-			}
-			try{
-				var objAdGroup = this.createAdGroup(objCampaign,listItems[i],objAdvKey,flMaxCpc);
-				this.createKeyWords(objAdGroup,listItems[i],listKeyWords,flMaxCpc);
-			}catch(err){
-				Logger.log(err)
-			}
+			//if(intRemTime < 30 || intRemCreate < 100 || intRemGet < 100){
+			//	Logger.log("I have reached my limit, see you next hour!");
+			//	label.setDescription(i.toString())
+			//	return;
+			//}
+			//try{
+			//	var objAdGroup = this.createAdGroup(objCampaign,listItems[i],objAdvKey,flMaxCpc);
+			//	this.createKeyWords(objAdGroup,listItems[i],listKeyWords,flMaxCpc);
+			//}catch(err){
+			//	Logger.log(err)
+			//}
 
-		}
+		//}
 		
 	}
 /*

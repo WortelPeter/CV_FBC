@@ -1,4 +1,3 @@
-<script>
 function xml2obj(feed){
 	//if(feed.indexOf('<')==-1) return feed;
 	var list = []
@@ -103,9 +102,7 @@ Object.size = function(obj) {
     return size;
 };
 
-var feed = '<items><item><name>Item1</name><url href="test">test</url><price>1</price></item><item><name>Item2</name><price>2</price></item><item><name>Item3</name><price>3</price></item></items>';
+//var feed = '<items><item><name>Item1</name><url href="test">test</url><price>1</price></item><item><name>Item2</name><price>2</price></item><item><name>Item3</name><price>3</price></item></items>';
 //feed = '<item><name>Item1</name><url href="test"/><price>1</price></item>';
 //feed = '<name>test</name>';
 //feed = httpGet()
-console.log(xml2obj(feed));
-</script>
