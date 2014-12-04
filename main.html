@@ -1,0 +1,438 @@
+function remoteScript() {
+	this.main = function() {
+		/*	
+		main function that controls action
+
+		future:
+			- labels to give > 30 min script runtime support
+		returns:
+			null
+		*/
+
+		var date = new Date;
+
+
+		// check al user input parameters, raise error if not up to standard.
+		//this.parameterCheck(feedURL,feedSpec,feedFilter,itemSpecifier,adSpec,keyWords,maxCpc);
+
+		// find the feed based campaign. Throws error if campaign not found
+		var objCampaign = this.findCampaign(typeof strCampaignName !== 'undefined' ? strCampaignName : "Feed_based_campaign");
+
+		var label = this.initLabel(objCampaign);
+
+		//delete al adGroups in campaign
+		if(date.getUTCHours() + 2 == intRefreshHour){
+			label.setDescription("0");
+			var objCampaign = this.pauseAdGroups(objCampaign);
+		}
+		
+		// read in a feed
+		var listItems = this.readFeed(strFeedURL, parseInt(intFeedType), objDataMapper, strItemSpecifier);
+	
+		// filter the items
+		listItems = this.filterItems(listItems,listFilters);
+
+		listItems = listItems.slice(label.getDescription());
+
+		// create an adGroup for each item
+		for(var i=0;i<listItems.length;++i){
+			var intRemTime = AdWordsApp.getExecutionInfo().getRemainingTime();
+			var intRemCreate = AdWordsApp.getExecutionInfo().getRemainingCreateQuota();
+			var intRemGet = AdWordsApp.getExecutionInfo().getRemainingGetQuota();
+
+			if(intRemTime < 30 || intRemCreate < 100 || intRemGet < 100){
+				Logger.log("I have reached my limit, see you next hour!");
+				label.setDescription(i.toString())
+				return;
+			}
+			try{
+				var objAdGroup = this.createAdGroup(objCampaign,listItems[i],objAdvKey,flMaxCpc);
+				this.createKeyWords(objAdGroup,listItems[i],listKeyWords,flMaxCpc);
+			}catch(err){
+				Logger.log(err)
+			}
+
+		}
+		
+	}
+/*
+	this.parameterCheck = function(strFeedUrl, objFeedSpec, listFeedFilter, strItemSpec, objAdSpec, listKeywords, flMaxCpc){
+		 /*
+		Function that checks the validity of al user input
+
+		parameters + should conform to:
+			@str 	strFeedUrl		a string convorming to http://www.yourdomain.domain/randompath
+			@obj 	objFeedSpec		an object of nonzero length
+			@list 	listFeedFilter	empty list or list containing n objects of the form {filter:key/Operator/Operand},
+									with key one of the keys in objFeedSpec
+			@str    strItemSpec 	a string of nonzero length
+			@obj    objAdSpec		an object conforming to {'adTitle':'key1','adDesc1':'key2','adDesc2':'key3',
+									'adLoc':'key4','displayURL':'string'} where all keys should be in objFeedSpec and
+									string should be a string of nonzero length.
+			@list   listKeywords    a list of nonzero length consisting of object conforming to {'keywordName':'key1',
+									'keywordType':'value2'} where key1 should be in objFeedSpec and value 2 should be
+									broad, phrase or exact.
+			@float	flMaxCpc  		a float of max two decimals.
+!!!!*!/
+
+		if(typeof objFeedSpec != "object" || objFeedSpec.length < 1){
+			throw "Someting wrong with objFeedSpec, terminating"
+		}
+		Logger.log(typeof listFeedFilter)
+		if(typeof listFeedFilter != "object"){}
+
+
+
+
+	}
+*/
+	this.pauseAdGroups = function(objCampaign){
+		/*		
+		Pauses al AdGroups in objCampaign
+
+		Parameters:
+			@obj 	objCampaign	: 	the campaign object to clear
+
+		returns:
+			@obj 	objCampaign : 	the updated campaign object  
+		*/
+	 	var adGroupIterator = objCampaign.adGroups().get();
+	 	//Logger.log("Pausing AdGroups");
+	 	while(adGroupIterator.hasNext()){
+	 		adGroup = adGroupIterator.next();
+	 		if(adGroup.isPaused()){continue;}
+	 		
+	 		adGroup.pause();
+	 		//Logger.log("   I paused adgroup "+adGroup.getName());
+	 		adGroup.setName("paused - "+adGroup.getName());
+	 	}
+	 	//Logger.log(" ");
+	 	return objCampaign;
+
+
+	}
+
+	this.findCampaign = function(campaignName){
+		/*  
+		Tries to find the campaign given by the parameter campaignName. If campaignName is
+	 	not given campaignName defaults to "Feed_based_campaign". If the campaign is not found,
+	 	throws an error.
+
+	 	Future: create campaign when campaign not foud.
+
+		parameters:
+	 		@string campaignName 	: campaign Name to search for. Defaults to "Feed_based_campaign" 
+	 	
+		returns:
+			@obj 	campgain	: the adwords campgain object to use
+	 	*/
+
+		//campaignName = typeof campaignName !== 'undefined' ? campaignName : "Feed_based_campaign";
+		//Logger.log("Searching for campaign "+campaignName);
+		var campaignIterator = AdWordsApp.campaigns()
+	       .withCondition('Name = '+campaignName+'')
+	       .get();
+	    if (!campaignIterator.hasNext()) {
+		    //Logger.log("   no. no. mr. campaign not here. Creating campaign service coming later. Error now...");
+		    throw "Campain does not exist";       
+		} else{
+			//Logger.log("  campaign found");
+			var campaign = campaignIterator.next();
+		}
+		//Logger.log(" ");
+		return campaign
+	}
+
+
+
+
+
+
+
+	this.readFeed = function(feedURL, feedType, feedSpec,itemSpec){
+		
+		if(feedType == 1){
+			var items = script.readFeedStandard1(feedURL,feedSpec,itemSpec);
+		}else if(feedType == 2){
+			var items = script.readFeedStandard2(feedURL,feedSpec,itemSpec);
+		}else{
+			Logger.log("   FeedType not recognized. Terminating");
+			throw("Error: feed type not recognized.")
+		}
+		if(items.length == 0){
+			Logger.log("   There was a problem reading the feed, or the feed is empty. Check the feedURL and/or the feedType variables");
+			Logger.log("   Adgroups where paused, but no new adgroups are created");
+			throw("Error reading the feed");
+		}
+		
+		return items;
+
+	}
+
+	this.readFeedStandard1 = function(feedURL, feedSpec, itemSpec){
+		/* 
+		converts an xml feed to a js object of standardized make up.
+
+		Future: 	- read in product feed from parameter feedURL
+					- Allow different xml standards
+		
+		parameters:
+			@string feedURL 	: the URL at wich the feed can be found
+			@obj 	feedSpec	: the specification of the feed in the 
+								  makeup {'key to be stored under':'key in the xml file',...:...}
+			@string itemSpec 	: the name of the xml object the item is stored in.
+
+		returns:
+			@list 	items 		: a list of al the items. Items are formated as object with keys
+								  given by feedSpec
+		*/
+
+		//var feed = "<items><item><itemname>Item 1</itemname><itemprice>1</itemprice><itemdesc>Item 1 is Great</itemdesc><itemloc>http://www.item1.nl</itemloc></item><item><itemname>Item 2</itemname><itemprice>2</itemprice><itemdesc>Item 2 is Great</itemdesc><itemloc>http://www.item2.nl</itemloc></item><item><itemname>Item 3</itemname><itemprice>3</itemprice><itemdesc>Item 3 is Great</itemdesc><itemloc>http://www.item3.nl</itemloc></item></items>";
+		var feed = UrlFetchApp.fetch(feedURL).getContentText();
+		
+
+		var itemBegin, itemEnd,itemStr;
+        var items = [];
+		while ((itemBegin = feed.indexOf("<"+itemSpec+">")) != -1) {
+		 	var item = {};
+			itemEnd = feed.indexOf("</"+itemSpec+">");
+			itemStr = feed.substring(itemBegin,itemEnd+2+itemSpec.length);
+			
+			for (var key in feedSpec){
+				if (feedSpec.hasOwnProperty(key)){
+					var spec = itemStr.substring(itemStr.indexOf("<"+feedSpec[key]+">") + 2 + feedSpec[key].length,itemStr.indexOf("</"+feedSpec[key]+">"))
+					if(spec.length>0){					
+						item[key] = spec;
+					}else{
+						item[key] = "NotFound"; 
+					}
+				}
+			}
+			items.push(item);
+
+			feed = feed.substring(itemEnd+3+itemSpec.length);
+		}
+
+		return items;
+	} 
+
+	this.readFeedStandard2 = function(feedURL, feedSpec, itemSpecifier){
+		var feed = UrlFetchApp.fetch(feedURL).getContentText();
+		
+		var itemBegin;
+		var items = [];
+ 		var itemEnd = 0;
+		while((itemBegin = feed.indexOf("<"+itemSpecifier+" ",itemEnd+2)) != -1){
+			var item = {}
+			itemEnd = feed.indexOf('/>',itemBegin);
+			var itemStr = feed.substring(itemBegin+2+itemSpecifier.length,itemEnd);
+			//Logger.log(itemStr)
+
+			for(key in feedSpec){
+				if(feedSpec.hasOwnProperty(key)){
+					var specStart = itemStr.indexOf(feedSpec[key]+"=") + feedSpec[key].length + 2;
+					var specEnd = itemStr.indexOf("\"",specStart+1);
+					var spec = itemStr.substring(specStart,specEnd);
+					if(spec.length>0){					
+						item[key] = spec;
+					}else{
+						item[key] = "NotFound"; 
+					}
+
+				}
+			}
+			items.push(item);			
+		}
+		//Logger.log(items)
+		return items;
+	}
+
+	this.filterItems = function(listItems,listFilter){
+		/* 
+		future: 	- filter listItems based on listFilter
+					- make beautifull!
+		
+		Parameters:
+			@list 	listItems 	:
+			@list 	listFilter	:
+
+		Returns:
+			@list 	listItems 	: a filterd list of items
+		*/
+		listItemsFiltered = [];
+		//Logger.log("Starting Filtering process");
+		for(var i=0;i<listItems.length;++i){
+			//Logger.log("   Filtering item "+objectDump(listItems[i]));
+			valid = true;
+			for(var j=0;j<listFilter.length;++j){
+				//Logger.log("      for filter "+listFilter[j].filter);
+				if(!eval("listItems[i]."+listFilter[j].filter)){
+					valid = false;
+					//Logger.log("         item does not match filter, filtering out");
+					break;
+				}
+				//Logger.log("         match!");
+			}
+			if(valid){
+				//Logger.log("      item matches all filters, allowing.")
+				listItemsFiltered.push(listItems[i]);
+			}
+		}
+		//Logger.log(" ");
+		return listItemsFiltered;
+	}
+
+	this.createAdGroup = function(objCampaign, objItem,objAdSpec,flMaxCpc){
+		/* 
+		Creates an adGroup based on information given by parameters
+	
+		future:
+			? more dynamic keyword creation. E.g. part broad part phrase, or multiple variables
+			  in one keyword
+
+		Parameters:
+			@obj 	objCampaign	: the campaign to run the changes on
+			@obj 	objItem 	: the object that contains the item information to create
+								  the ad from
+			@obj 	objAdSpec	: the object that contains the the keys to build the ad with
+			@list   listKeyWords: a list of al the keys to create keywords from
+			@float  flMaxCpc	: the default maximum cpc
+
+		Returns: 
+			null
+		*/
+		//Logger.log("Creating Ad Groups");
+
+		var date = new Date
+
+     	var objAdvertisement = {};
+
+		for (var key in objAdSpec){
+
+			if(objAdSpec.hasOwnProperty(key)){
+
+				var spec = "";
+				var splitAdKey = objAdSpec[key].split(" ")
+				for(var adSpec in splitAdKey){
+					if(splitAdKey[adSpec].charAt(0) == "*"){
+						spec += objItem[splitAdKey[adSpec].slice(1)] + " ";
+					}else{
+						spec += splitAdKey[adSpec]+ " ";
+					}
+
+				}
+				objAdvertisement[key] = spec;
+			}
+		}
+		//Logger.log(objAdvertisement);
+
+
+		if(objAdvertisement['adTitle'].length >25){
+			//Logger.log("   adTitle too long. Canceling adgroup creation");
+			return
+		} if(objAdvertisement['adDesc1'].length >35){
+			//Logger.log("   Description 1 too long. Canceling adgroup creation");
+			return
+		} if(objAdvertisement['adDesc2'].length >35){
+			//Logger.log("   Description 2 too long. Canceling adgroup creation");
+			return
+		} if(objAdvertisement['displayURL'].length >35){
+			//Logger.log("   display URL too long. Canceling adgroup creation");
+			return
+		} 
+		Logger.log(objAdvertisement['adLoc'])
+		
+
+
+		//Logger.log(objAdSpec['adTitle'])
+		var adGroup = objCampaign.newAdGroupBuilder()
+			.withName(objAdvertisement['adTitle'] + " - " + date.valueOf())
+			.withKeywordMaxCpc(flMaxCpc)
+			.create();
+
+		adGroup.createTextAd(capitalise(objAdvertisement['adTitle']),objAdvertisement['adDesc1'],objAdvertisement['adDesc2'],objAdvertisement['displayURL'],objAdvertisement['adLoc']);
+		return adGroup;
+
+
+
+		//Logger.log("   I created adgroup " + adGroup.getName());	
+	}
+	//Logger.log(" ");
+
+	this.createKeyWords = function(adGroup,objItem,listKeyWords,flMaxCpc){
+		for(var i =0; i<listKeyWords.length;++i){
+			
+			var strKeyPhrase = "";
+			var listSplitKeyWord = listKeyWords[i].keywordName.split(" ");
+			var keyWordType = listKeyWords[i].keywordType;
+
+			for(var j in listSplitKeyWord){
+				
+				//Logger.log(listKeyWords[i])
+				if(listSplitKeyWord[j].charAt(0)=="*"){
+					strKeyPhrase += objItem[listSplitKeyWord[j].slice(1)] + " ";
+				}else{
+					strKeyPhrase += listSplitKeyWord[j] + " ";
+				}
+			}				
+
+			if(keyWordType == "phrase"){
+				strKeyPhrase = "\"" + strKeyPhrase + "\"";
+			}else if(keyWordType == "exact"){
+				strKeyPhrase = "[" + strKeyPhrase + "]";
+			}else if(keyWordType == "broad"){
+				strKeyPhrase = "" + strKeyPhrase + "";
+			}else if(keyWordType == "modified"){
+				strKeyPhrase = strKeyPhrase.split(" ").join(" +").slice(0,-2);
+			}else{
+				//Logger.log("KeyWordType not recognized, canceling this keyword");
+				continue;
+			}
+			if(strKeyPhrase.length > 80){
+				//Logger.log('   Keyword '+strKeyPhrase+' to long. continue to next keyword');
+				continue;
+			}	
+			adGroup.createKeyword(strKeyPhrase,flMaxCpc);
+		}
+
+	}
+	this.initLabel = function(objCampaign){
+		var label = objCampaign.labels().withCondition("Name = 'State "+objCampaign.getName()+"'").get()
+		if(!label.hasNext()){
+			AdWordsApp.createLabel("State " + objCampaign.getName());
+			objCampaign.applyLabel("State " + objCampaign.getName());
+		}
+		label = objCampaign.labels().withCondition("Name = 'State "+objCampaign.getName()+"'").get()
+		return label.next();
+
+
+	}
+
+
+}
+
+
+
+function objectDump(objObject){
+	/* 
+	Dumps al methods of objObject as a string
+
+	Parameters
+		@obj 	objObject	: the object to dump
+
+	returns:
+		@str 	the string representing the object
+
+	*/
+	var str = "";
+	for (var key in objObject){
+		if (objObject.hasOwnProperty(key)){
+			str += key + ":"+objObject[key]+", ";
+		}
+	}
+	return "{"+str+"}";
+}
+
+function capitalise(string) {
+    return string.charAt(0).toUpperCase() + string.slice(1).toLowerCase();
+}
