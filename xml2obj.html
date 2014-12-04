@@ -1,6 +1,6 @@
 <script>
 function xml2obj(feed){
-	if(feed.indexOf('<')==-1) return feed;
+	//if(feed.indexOf('<')==-1) return feed;
 	var list = []
 	var name = findFirstName(feed);
 	var closed = findClosed(feed);
@@ -16,6 +16,10 @@ function xml2obj(feed){
 		list.push(attributes);
 	feed = feed.substring(closedIndex+1,feed.length - name.length - 3);
 	
+	if(feed.indexOf('<')==-1){
+		return feed;
+	}
+
 	while(feed.length != 0){
 		var obj = {}
 		var subname = findFirstName(feed);
@@ -24,18 +28,15 @@ function xml2obj(feed){
 		else
 			var subFeedString = feed.substring(0,feed.indexOf('</'+subname+'>')+3+subname.length);
 		feed = feed.substring(subFeedString.length);
-		//if(subFeedString.indexOf('<') == -1){
-			//obj[subname] = subFeedString;
-			//continue;
-		//}
 		obj[subname] = xml2obj(subFeedString);
 		list.push(obj);
 	}
 	
 	obj = {};
-	obj[name] = joinObjects(list);
+	obj = joinObjects(list);
 	return obj;
 }
+
 function joinObjects(listObjects){
 	//console.log(listObjects);
 	var obj = {}
@@ -102,18 +103,9 @@ Object.size = function(obj) {
     return size;
 };
 
-function httpGet(theUrl)
-{
-    var xmlHttp = null;
-
-    xmlHttp = new XMLHttpRequest();
-    xmlHttp.open( "GET", theUrl, false );
-    xmlHttp.send( null );
-    return xmlHttp.responseText;
-}
-
-var feed = '<items><item><name>Item1</name><url href="test"/><price>1</price></item><item><name>Item2</name><price>2</price></item><item><name>Item3</name><price>3</price></item></items>';
-feed = '<item><name>Item1</name><url href="test"/><price>1</price></item>';
-feed = httpGet()
+var feed = '<items><item><name>Item1</name><url href="test">test</url><price>1</price></item><item><name>Item2</name><price>2</price></item><item><name>Item3</name><price>3</price></item></items>';
+//feed = '<item><name>Item1</name><url href="test"/><price>1</price></item>';
+//feed = '<name>test</name>';
+//feed = httpGet()
 console.log(xml2obj(feed));
 </script>
