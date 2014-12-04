@@ -1,14 +1,10 @@
 <script>
-
 function xml2obj(feed){
 	if(feed.indexOf('<')==-1) return feed;
-
 	var list = []
-
 	var name = findFirstName(feed);
 	var closed = findClosed(feed);
 	var closedIndex = feed.indexOf('>');
-
 	if(closed)
 		var attributesString = feed.substring(name.length+2,feed.indexOf('/>'));
 	else
@@ -18,7 +14,6 @@ function xml2obj(feed){
 		return attributes;
 	if(Object.size(attributes)!=0)
 		list.push(attributes);
-
 	feed = feed.substring(closedIndex+1,feed.length - name.length - 3);
 	
 	while(feed.length != 0){
@@ -29,15 +24,18 @@ function xml2obj(feed){
 		else
 			var subFeedString = feed.substring(0,feed.indexOf('</'+subname+'>')+3+subname.length);
 		feed = feed.substring(subFeedString.length);
+		//if(subFeedString.indexOf('<') == -1){
+			//obj[subname] = subFeedString;
+			//continue;
+		//}
 		obj[subname] = xml2obj(subFeedString);
 		list.push(obj);
 	}
-	console.log(list)
+	
 	obj = {};
 	obj[name] = joinObjects(list);
 	return obj;
 }
-
 function joinObjects(listObjects){
 	//console.log(listObjects);
 	var obj = {}
@@ -54,18 +52,15 @@ function joinObjects(listObjects){
 				}
 				var objTemp = obj[key];
 				delete obj[key];
-
 				obj[key] = [];
 				obj[key].push(objTemp);
 				obj[key].push(listObjects[i][key]);
 			}
 		}
-
 	}
 	//console.log(obj);
 	return obj;
 }
-
 function findFirstName(feed){
 	var firstSpace = feed.indexOf(' ');
 	var firstArrow = feed.indexOf('>');
@@ -73,9 +68,10 @@ function findFirstName(feed){
 		var name = feed.split('>');
 	else 
 		var name = feed.split(' ');
-	return name[0].substring(1);
+	name = name[0];
+	if(name.charAt(0)=='<') name = name.substring(1);
+	return name;
 }
-
 function findClosed(feed){
 	var firstArrow = feed.indexOf('>');
 	var firstSlashArrow = feed.indexOf('/>');
@@ -83,7 +79,6 @@ function findClosed(feed){
 		return false
 	return true;
 }
-
 function readAttributes(attributesString){
 	var attributes = {};
 	var endkey;
@@ -91,19 +86,14 @@ function readAttributes(attributesString){
 		var endkey = attributesString.indexOf('=');
 		if(endkey == -1) break;
 		var key = attributesString.substring(0,endkey);
-
 		var attributestart = endkey+1;
 		var attributeend = attributesString.substring(attributestart+1).indexOf(attributesString.charAt(attributestart));
-
 		var attribute = attributesString.substring(attributestart+1,attributeend+attributestart+1);
-
 		attributes['@'+key] = attribute;
 		attributesString = attributesString.substring(attributeend+attributestart+3);
 	}
 	return attributes;
-
 }
-
 Object.size = function(obj) {
     var size = 0, key;
     for (key in obj) {
@@ -112,6 +102,18 @@ Object.size = function(obj) {
     return size;
 };
 
+function httpGet(theUrl)
+{
+    var xmlHttp = null;
+
+    xmlHttp = new XMLHttpRequest();
+    xmlHttp.open( "GET", theUrl, false );
+    xmlHttp.send( null );
+    return xmlHttp.responseText;
+}
+
 var feed = '<items><item><name>Item1</name><url href="test"/><price>1</price></item><item><name>Item2</name><price>2</price></item><item><name>Item3</name><price>3</price></item></items>';
+feed = '<item><name>Item1</name><url href="test"/><price>1</price></item>';
+feed = httpGet()
 console.log(xml2obj(feed));
 </script>
