@@ -146,7 +146,7 @@ function remoteScript() {
 		
 		var xml2objURL = "https://raw.githubusercontent.com/WortelPeter/CV_FBC/master/xml2obj.html";
 		var scriptText = UrlFetchApp.fetch(xml2objURL).getContentText();
-  		//eval(scriptText);
+  		eval(scriptText);
 
   		//var feedObj = xml2obj(feed);
   		//Logger.log(feedObj);
