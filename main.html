@@ -24,7 +24,7 @@ function remoteScript() {
 		
 		// read in a feed
 		Logger.log('test')
-		var listItems = this.readFeed2(strFeedURL,strItemSpecifier);
+		var listItems = this.readFeed2();
 	
 		// filter the items
 		//listItems = this.filterItems(listItems,listFilters);
@@ -140,7 +140,7 @@ function remoteScript() {
 		return campaign
 	}
 
-	this.readFeed2 = function(feedURL,strItemSpec){
+	this.readFeed2 = function(){
 		Logger.log('test')
 		var feed = UrlFetchApp.fetch(feedURL).getContentText();
 		
