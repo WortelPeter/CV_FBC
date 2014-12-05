@@ -14,7 +14,8 @@ function xml2obj(feed){
 }
 
 function xml2objRec(feed){
-	Logger.log('feed')
+	Logger.log(feed)
+	Logger.log(' ')
 	//if(feed.indexOf('<')==-1) return feed;
 	var list = []
 	var name = findFirstName(feed);
