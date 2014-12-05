@@ -141,7 +141,7 @@ function remoteScript() {
 	}
 
 	this.readFeed2 = function(feedURL,strItemSpec){
-
+		Logger.log('test')
 		var feed = UrlFetchApp.fetch(feedURL).getContentText();
 		
 		var xml2objURL = "https://raw.githubusercontent.com/WortelPeter/CV_FBC/master/xml2obj.html";
